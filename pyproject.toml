@@ -1,0 +1,31 @@
+[project]
+name = "openbep4eu-calculation-engine"
+version = "0.1.0"
+description = "OpenBEP4EU – core calculation engine"
+license = { file = "LICENSE" }
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.7",
+    "typing-extensions>=4.10",
+    "psycopg[binary]>=3.1",
+    "alembic>=1.13",
+    "pandas>=2.0",
+    "numpy>=1.26",
+    "pvlib>=0.10"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
