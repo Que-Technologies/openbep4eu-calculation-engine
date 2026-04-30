@@ -1,66 +1,67 @@
 import pandas as pd
 import math
 import re
+from openbep4eu.building_as_such.models.definitions import ScheduleCompact
+from openbep4eu.building_as_such.models.epw import EPWData
+from typing import Literal
+from typing import List, Optional, Union
+from openbep4eu.building_as_such.models.envelope_element import ConstructionLayer
+
+ElementType = Literal["Ceiling", "Floor", "Roof", "Wall", "Door", "GlassDoor", "Window"]
+
+def build_simulation_timeline(epw_data: EPWData) -> pd.DatetimeIndex:
+    return epw_data.data.index
+
+def build_supply_air_temperature_series(
+        temp_air: pd.Series,
+        delta: float = 0.0,
+) -> pd.Series:
+    return temp_air + delta
+
+def constant_series(index: pd.DatetimeIndex, value: float) -> pd.Series:
+    return pd.Series(value, index=index, dtype=float)
 
 
 def build_schedule_series_from_id(
         schedule_id,
         timeline,
-        schedule_constant_map=None,
-        schedule_compact_map=None,
+        schedule_constant_value=None,
+        schedule_compact_map: dict[str, ScheduleCompact] | None = None,
 ) -> pd.Series:
 
-    if schedule_constant_map:
-        sch = schedule_constant_map[schedule_id]
-        return pd.Series(float(sch.hourlyValue), index=timeline)
+    if schedule_constant_value:
+        return pd.Series(schedule_constant_value, index=timeline)
 
     if schedule_compact_map:
         return expand_schedule_compact_to_series(
-            schedule=schedule_compact_map[schedule_id],
+            schedule_id=schedule_id,
+            schedule=schedule_compact_map,
             index=timeline,
         )
 
-    raise ValueError(f"Schedule '{schedule_id}' not found.")
+    raise ValueError(f"Schedule '{schedule_id}' not provided.")
 
+
+def build_t_ext_series(epw_data: EPWData) -> pd.Series:
+
+    t_ext = epw_data.data["temp_air"]
+
+    return t_ext
 
 def expand_schedule_compact_to_series(
+        schedule_id,
         schedule,
         index: pd.DatetimeIndex,
 ) -> pd.Series:
-    """
-    Expand a scheduleCompact object into a Series aligned to `index`.
-
-    Supported compact pattern:
-      Through: MM/DD
-      For: AllDays | Weekdays | Weekends | Monday ... Sunday
-      Until: HH:MM
-      <numeric value>
-
-    Example supported formats are the ones shown in the uploaded JSON examples.  [oai_citation:1‡scheduleCompact_examples.json](sediment://file_00000000dc8c71fda4930852086272ff)
-    """
     if index.empty:
         return pd.Series(dtype=float, index=index)
 
     data = getattr(schedule, "data", None)
     if data is None:
-        raise ValueError(f"scheduleCompact '{getattr(schedule, 'id', '<unknown>')}' has no data field.")
+        raise ValueError(f"scheduleCompact '{schedule_id}' has no data field.")
 
     fields = [_normalize_compact_field(item.field) for item in data]
 
-    # Parse into blocks:
-    # [
-    #   {
-    #     "through": (12, 31),
-    #     "for_rules": [
-    #         {
-    #             "day_type": "AllDays",
-    #             "until_rules": [((6,0), 16.0), ((22,0), 20.0), ((24,0), 16.0)]
-    #         },
-    #         ...
-    #     ]
-    #   },
-    #   ...
-    # ]
     through_blocks: list[dict] = []
 
     i = 0
@@ -106,7 +107,6 @@ def expand_schedule_compact_to_series(
 
         raise ValueError(f"Unexpected scheduleCompact token at position {i}: {f!r}")
 
-    # Build series
     out = pd.Series(index=index, dtype=float)
 
     for ts in index:
@@ -223,3 +223,43 @@ def _date_mmdd(ts: pd.Timestamp) -> tuple[int, int]:
 
 def _month_day_leq(a: tuple[int, int], b: tuple[int, int]) -> bool:
     return a <= b
+
+
+def make_typology_element(
+        element_type: ElementType,
+        outside_boundary_condition: str | None = None,
+) -> str:
+
+    if element_type in {"Ceiling", "Floor", "Roof", "Wall"}:
+        return "Ground" if outside_boundary_condition == "Ground" else "Opaque"
+
+    if element_type in {"Window", "GlassDoor"}:
+        return "Window"
+
+    if element_type == "Door":
+        return "Opaque"
+
+    raise ValueError(f"Unsupported element type: {element_type!r}")
+
+def _build_elements_for_zone(
+        n_nodes: int,
+        kappa_array: List[float],
+        a_sol_array: List[float],
+        h_pli_array: List[float]
+) -> List[ConstructionLayer]:
+
+    layers = []
+    for i in range(n_nodes):
+        h_inner = h_pli_array[i] if i < n_nodes - 1 else None
+        h_outer = h_pli_array[i - 1] if i > 0 else None
+
+        layer = ConstructionLayer(
+            index=i,
+            kappa=kappa_array[i],
+            a_sol=a_sol_array[i],
+            h_pli_inner=h_inner,
+            h_pli_outer=h_outer
+        )
+        layers.append(layer)
+
+    return layers
