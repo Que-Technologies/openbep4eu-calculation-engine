@@ -1,10 +1,12 @@
+# engine/definitions.py
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
+from typing import Optional, Literal
 import pandas as pd
 import numpy as np
 
+LayerKind = Literal["materialOpaque", "materialNoMass", "glazingSimpleSystem"]
 
 class HeatFlowDirection(str, Enum):
     UPWARDS = "upwards"
@@ -41,6 +43,50 @@ class ScheduleCompact:
     id: str
     data: list[ScheduleCompactItem] = []
 
+
+@dataclass
+class MaterialOpaque:
+    id: str
+    thickness: float
+    conductivity: float
+    density: float
+    specificHeat: float
+    thermalAbsorptance: float = 0.9
+    solarAbsorptance: float = 0.7
+    visibleAbsorptance: float = 0.7
+
+@dataclass
+class MaterialNoMass:
+    id: str
+    thermalResistance: float
+    thermalAbsorptance: float = 0.9
+    solarAbsorptance: float    = 0.7
+    visibleAbsorptance: float    = 0.7
+
+@dataclass
+class GlazingSimpleSystem:
+    id: str
+    uFactor: float
+    solarHeatGainCoefficient: float
+    visibleTransmittance: float
+
+@dataclass
+class MaterialLayerSummary:
+    material_id: str
+    kind: LayerKind
+    thermal_conduction_resistance: float | None = None
+    thermal_conduction_capacity: float | None = None
+    thermal_conduction_transmittance: float | None = None
+
+@dataclass
+class ConstructionSummary:
+    construction_id: str
+    layers: list[MaterialLayerSummary]
+    thermal_conduction_resistance: float
+    thermal_conduction_capacity: float
+    thermal_conduction_transmittance:float
+
+@dataclass
 class GroundTemperatureProperties:
     externalWallsThickness: float
     exposedPerimeter:float
@@ -51,6 +97,7 @@ class GroundTemperatureProperties:
     conductivity: float
     heatCapacity: float
 
+@dataclass
 class ZoneSurfaceCoefficients:
     element_id: str
     convective_heat_transfer_coefficients_internal: float
@@ -66,15 +113,15 @@ class ZoneSurfaceCoefficients:
     thermal_conduction_capacity: float
     thermal_conduction_transmittance: float
 
-
-class ZoneGroundSurface:
+@dataclass
+class ZoneSurface:
     zone_id: str
     element_id: str
     first_ground_element: bool
     area: float
     outside_boundary_condition: OutsideBoundaryCondition
-    ground_temperature_properties: GroundTemperatureProperties
     zone_surface_coefficients: ZoneSurfaceCoefficients
+    ground_temperature_properties: Optional[GroundTemperatureProperties] = None
 
 @dataclass
 class IrradianceTimeseries:

@@ -9,6 +9,21 @@ from openbep4eu.building_as_such.models.envelope_element import ConstructionLaye
 
 ElementType = Literal["Ceiling", "Floor", "Roof", "Wall", "Door", "GlassDoor", "Window"]
 
+def prepend_last_month_series(series: pd.Series) -> pd.Series:
+    dec = series[series.index.month == 12]
+    return pd.concat([dec, series])
+
+def prepend_last_month_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    dec = df[df.index.month == 12]
+    return pd.concat([dec, df])
+
+
+def prepend_last_month_list(values, original_index: pd.DatetimeIndex):
+    dec_idx = [i for i, ts in enumerate(original_index) if ts.month == 12]
+    dec_values = [values[i] for i in dec_idx]
+    return dec_values + list(values)
+
+
 def build_simulation_timeline(epw_data: EPWData) -> pd.DatetimeIndex:
     return epw_data.data.index
 

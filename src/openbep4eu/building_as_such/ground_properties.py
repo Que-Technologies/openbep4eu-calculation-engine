@@ -1,10 +1,10 @@
 import pandas as pd
 import numpy as np
-from openbep4eu.building_as_such.models.definitions import ZoneGroundSurface, OutsideBoundaryCondition
+from openbep4eu.building_as_such.models.definitions import ZoneSurface, OutsideBoundaryCondition
 
 def contact_with_ground_calculations_for_zone(
         zone_id: str,
-        zone_surfaces: list[ZoneGroundSurface],
+        zone_surfaces: list[ZoneSurface],
         theta_sup: pd.Series,
 ) -> tuple[np.ndarray, float, float]:
 

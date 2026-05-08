@@ -3,37 +3,28 @@ import math
 from openbep4eu.building_as_such.models.boundary import (
     GroundBoundary,
     AdjacentZoneBoundary,
-    ExteriorBoundary
+    ExteriorBoundary,
+    BoundaryCondition
 )
 from openbep4eu.building_as_such.models.envelope_element import EnvelopeElement
 
 
 def thermal_radiation_sky(
-        zone_id:str,
-        zone_elements: list[EnvelopeElement],
+        element_id: str,
+        boundary: "BoundaryCondition",
+        tilt_deg: float,
+        h_re: float,
         delta_theta_sky: float = 11.0,
-) -> np.ndarray:
+) -> float:
+    if isinstance(boundary, (GroundBoundary, AdjacentZoneBoundary)):
+        sky_factor = 0.0
+    elif isinstance(boundary, ExteriorBoundary):
+        tilt_rad = math.radians(tilt_deg)
+        phi_sky = (1.0 + math.cos(tilt_rad)) / 2.0
+        sky_factor = phi_sky
+    else:
+        raise KeyError(
+            f"Unknown ISO element boundary for element_id '{element_id}': {type(boundary)}"
+        )
 
-    sky_factor_elements = []
-
-    for i, elem_id in enumerate(zone_elements):
-
-        if isinstance(elem_id.boundary, GroundBoundary):
-            sky_factor_elements.append(0.0)
-            continue
-
-
-        if isinstance(elem_id.boundary, AdjacentZoneBoundary):
-            sky_factor_elements.append(0.0)
-            continue
-
-
-        if isinstance(elem_id.boundary, ExteriorBoundary):
-            tilt_angle = math.radians(elem_id.tilt_deg)
-            sky_view_factor = (1.0 + math.cos(tilt_angle)) / 2.0
-            sky_factor_elements.append(sky_view_factor * elem_id.h_re)
-
-        else:
-            raise KeyError(f"Unknown ISO element boundary '{type(elem_id.boundary)}'.")
-
-    return np.multiply(sky_factor_elements, delta_theta_sky)
+    return sky_factor * h_re * delta_theta_sky

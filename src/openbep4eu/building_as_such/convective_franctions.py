@@ -1,9 +1,9 @@
 from typing import Optional, Tuple
 
 F_INT_C_DEFAULT = 0.4
-F_SOL_C_DEFAULT = 0.4
-F_H_C_DEFAULT = 0.4
-F_C_C_DEFAULT = 0.4
+F_SOL_C_DEFAULT = 0.1
+F_H_C_DEFAULT = 1.0
+F_C_C_DEFAULT = 1.0
 
 def get_convective_fractions(
         f_int_c: Optional[float] = None,
