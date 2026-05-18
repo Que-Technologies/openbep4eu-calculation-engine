@@ -72,6 +72,8 @@ def get_total_irradiance(
             model_perez="allsitescomposite1990",
         )
 
+        poa = poa.fillna(0.0)
+
         poa_global = poa["poa_global"]
         poa_direct = poa.get("poa_direct")
         poa_diffuse = poa.get("poa_diffuse")
